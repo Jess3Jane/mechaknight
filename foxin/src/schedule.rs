@@ -9,6 +9,7 @@ use bevy::{
 pub(crate) fn build(app: &mut App) {
     app.init_schedule(PreLayout);
     app.init_schedule(Layout);
+    app.init_schedule(MidRender);
     app.init_schedule(Render);
     app.init_schedule(PostRender);
 
@@ -27,6 +28,9 @@ pub struct PreLayout;
 
 #[derive(Debug, ScheduleLabel, Hash, PartialEq, Eq, Clone)]
 pub struct Layout;
+
+#[derive(Debug, ScheduleLabel, Hash, PartialEq, Eq, Clone)]
+pub struct MidRender;
 
 #[derive(Debug, ScheduleLabel, Hash, PartialEq, Eq, Clone)]
 pub struct Render;
@@ -53,6 +57,7 @@ fn run_schedule(world: &mut World) {
     if world.run_system(*crate::time::SHOULD_RENDER_SYSTEM.get().unwrap()).unwrap() {
         world.run_schedule(PreLayout);
         world.run_schedule(Layout);
+        world.run_schedule(MidRender);
         world.run_schedule(Render);
         world.run_schedule(PostRender);
     }

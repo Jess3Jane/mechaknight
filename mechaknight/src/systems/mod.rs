@@ -14,4 +14,6 @@ add_modules!(
     quit
     ui_layout
     map
+    world_entity
+    player
 );

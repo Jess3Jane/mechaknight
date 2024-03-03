@@ -5,7 +5,7 @@ use bevy::{
         entity::Entity,
         system::{Commands, Query}, 
         query::With,
-        schedule::IntoSystemConfigs,
+        schedule::{IntoSystemConfigs, SystemSet},
     },
     math::{URect, U16Vec2, IVec2, IRect},
 };
@@ -22,8 +22,11 @@ use log::{debug, trace};
 
 pub fn build(app: &mut App) {
     app.add_systems(Startup, (test_chunks));
-    app.add_systems(Render, render_chunks);
+    app.add_systems(Render, render_chunks.in_set(MapRender));
 }
+
+#[derive(SystemSet, Hash, Copy, Clone, PartialEq, Eq, Debug)]
+pub struct MapRender;
 
 fn test_chunks(mut commands: Commands) {
     for x in 0..10 {
