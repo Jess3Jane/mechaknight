@@ -795,6 +795,10 @@ dependencies = [
 [[package]]
 name = "mechaknight"
 version = "0.1.0"
+dependencies = [
+ "bevy",
+ "foxin",
+]
 
 [[package]]
 name = "memchr"
