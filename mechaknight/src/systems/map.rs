@@ -1,24 +1,31 @@
 use bevy::{
     app::{Startup, App},
-    ecs::{component::Component, system::{Commands, Query},  query::With},
+    ecs::{
+        component::Component,
+        entity::Entity,
+        system::{Commands, Query}, 
+        query::With,
+        schedule::IntoSystemConfigs,
+    },
     math::{URect, U16Vec2, IVec2, IRect},
 };
 use ratatui::layout::Position;
 use crate::{
-    systems::ui_layout::MapWindow,
+    systems::ui_layout::{SetupWindows, MapWindow},
     utils::rect_ratatui_to_bevy,
 };
 use foxin::{
     schedule::Render,
     render::DrawBuffer,
 };
+use log::{debug, trace};
 
 pub fn build(app: &mut App) {
-    app.add_systems(Startup, init);
+    app.add_systems(Startup, (test_chunks));
     app.add_systems(Render, render_chunks);
 }
 
-fn init(mut commands: Commands) {
+fn test_chunks(mut commands: Commands) {
     for x in 0..10 {
         for y in 0..10 {
             commands.spawn((
@@ -31,24 +38,27 @@ fn init(mut commands: Commands) {
 
 fn render_chunks(
     chunks: Query<(&ChunkData, &ChunkPosition)>,
-    mut buffers: Query<&mut DrawBuffer, With<MapWindow>>,
+    mut buffers: Query<(&mut DrawBuffer, &MapCameraCenter), With<MapWindow>>,
 ) {
-    for mut buffer in buffers.iter_mut() {
+    for (mut buffer, camera_center) in buffers.iter_mut() {
+        let map_bounds = camera_center.get_view_rect(&buffer);
+        let view_offset = camera_center.get_view_offset(&buffer);
+        debug!("Map view rect: {:#?}", map_bounds);
+        debug!("Map view offset: {:#?}", view_offset);
         buffer.0.reset();
         for (chunk, chunk_pos) in chunks.iter() {
             let overlap = chunk_pos
                 .bounds()
-                .intersect(rect_ratatui_to_bevy(buffer.0.area).as_irect())
-                .as_urect();
+                .intersect(map_bounds);
             if overlap.is_empty() { continue; }
-
-            for x in overlap.min.x..=overlap.max.x {
-                for y in overlap.min.y..=overlap.max.y {
-                    let pos_in_chunk = U16Vec2 {
-                        x: (x % CHUNK_SIZE.x as u32) as u16,
-                        y: (y % CHUNK_SIZE.y as u32) as u16,
-                    };
-                    let cell = buffer.0.get_mut(x as u16, y as u16);
+            debug!("Overlap for chunk {:?}: {:#?}", chunk_pos, overlap);
+            for x in 0..overlap.width() {
+                for y in 0..overlap.height() {
+                    let delta = IVec2 { x, y };
+                    let cell_pos = overlap.min + delta;
+                    let pos_in_chunk = (cell_pos % CHUNK_SIZE.as_ivec2()).as_u16vec2();
+                    let buffer_pos = (cell_pos + view_offset).as_u16vec2();
+                    let cell = buffer.0.get_mut(buffer_pos.x, buffer_pos.y);
                     match chunk.data[ChunkData::get_index(pos_in_chunk)] {
                         Tile::Floor => {
                             cell.set_char('.');
@@ -63,7 +73,7 @@ fn render_chunks(
     }
 }
 
-pub const CHUNK_SIZE: U16Vec2 = U16Vec2 { x: 128, y: 128 };
+pub const CHUNK_SIZE: U16Vec2 = U16Vec2 { x: 4, y: 4 };
 
 #[derive(Copy, Clone, Debug, Default,)]
 pub enum Tile {
@@ -127,7 +137,29 @@ impl ChunkPosition {
         };
         IRect {
             min,
-            max: min + CHUNK_SIZE.as_ivec2() - IVec2::ONE,
+            max: min + CHUNK_SIZE.as_ivec2(),
+        }
+    }
+}
+
+#[derive(Component, Clone, Debug, Default)]
+pub struct MapCameraCenter(pub IVec2);
+
+impl MapCameraCenter {
+    pub fn get_view_rect(&self, buffer: &DrawBuffer) -> IRect {
+        let size = buffer.0.area.as_size();
+        IRect::from_center_size(
+            self.0,
+            IVec2 { x: size.width as i32, y: size.height as i32, }
+        )
+    }
+    
+    /// Get a vector translating world coordinates into buffer coordinates
+    pub fn get_view_offset(&self, buffer: &DrawBuffer) -> IVec2 {
+        let view_rect = self.get_view_rect(buffer);
+        IVec2 {
+            x: buffer.0.area.x as i32 - view_rect.min.x,
+            y: buffer.0.area.y as i32 - view_rect.min.y,
         }
     }
 }

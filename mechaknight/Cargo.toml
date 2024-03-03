@@ -5,5 +5,8 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.13.0", default-features = false }
+flexi_logger = "0.27.4"
 foxin = {path = "../foxin"}
+log = "0.4.21"
+log-panics = { version = "2.1.0", features = ["backtrace", "with-backtrace"] }
 ratatui = { version = "0.26.1", features = ["unstable-widget-ref"] }
