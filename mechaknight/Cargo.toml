@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.13.0", default-features = false }
 foxin = {path = "../foxin"}
+ratatui = { version = "0.26.1", features = ["unstable-widget-ref"] }

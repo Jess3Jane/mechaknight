@@ -2,6 +2,7 @@ use foxin::Foxin;
 use bevy::{MinimalPlugins, app::App};
 
 mod systems;
+mod utils;
 
 fn main() {
     let mut app = App::new();

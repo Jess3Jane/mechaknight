@@ -12,4 +12,6 @@ macro_rules! add_modules(
 
 add_modules!(
     quit
+    ui_layout
+    map
 );
